@@ -10,7 +10,7 @@ mkdir target
 cd $(dirname $0)/target
 
 mkdir downloads
-mkdir -p packages/mobile-logger
+mkdir packages
 
 # elasticsearch
 if wget -O downloads/elasticsearch.tar.gz https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-$ELASTICSEARCH_VERSION.tar.gz
@@ -42,7 +42,7 @@ fi
 
 cp ../scripts/delete-old-indexes.sh downloads
 
-tar czfv packages/mobile-logger/mobile-logger.tar.gz -C downloads elasticsearch elasticsearch.conf kibana nginx.conf nginx-sites.conf delete-old-indexes.sh
+tar czfv packages/elk-stack.tar.gz -C downloads elasticsearch elasticsearch.conf kibana nginx.conf nginx-sites.conf delete-old-indexes.sh
 cp ../deploy.json .
 zip -rv artifacts.zip packages/ deploy.json
 
