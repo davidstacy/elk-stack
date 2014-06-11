@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
 ELASTICSEARCH_VERSION=1.2.1
 KIBANA_VERSION=3.1.0
