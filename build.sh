@@ -21,6 +21,7 @@ then
     tar xfv downloads/elasticsearch.tar.gz -C downloads
     mv downloads/elasticsearch-* downloads/elasticsearch
     ./downloads/elasticsearch/bin/plugin -install mobz/elasticsearch-head
+    ./downloads/elasticsearch/bin/plugin -install karmi/elasticsearch-paramedic
     ./downloads/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-cloud-aws/2.1.1
     cp ../elasticsearch.yml downloads/elasticsearch/config
     cp ../logging.yml downloads/elasticsearch/config
