@@ -6,6 +6,8 @@ set -x
 ELASTICSEARCH_VERSION=1.2.1
 KIBANA_VERSION=3.1.0
 
+pwd
+
 [ -d target ] && rm -rf target
 mkdir target
 cd $(dirname $0)/target
