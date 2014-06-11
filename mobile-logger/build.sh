@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-ELASTICSEARCH_VERSION=1.0.1
-KIBANA_VERSION=3.0.0
+ELASTICSEARCH_VERSION=1.2.1
+KIBANA_VERSION=3.1.0
 
 [ -d target ] && rm -rf target
 mkdir target
 cd $(dirname $0)/target
 
 mkdir downloads
-mkdir -p packages/frontend-logger
+mkdir -p packages/mobile-logger
 
 # elasticsearch
 if wget -O downloads/elasticsearch.tar.gz https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-$ELASTICSEARCH_VERSION.tar.gz
@@ -16,7 +16,7 @@ then
     tar xfv downloads/elasticsearch.tar.gz -C downloads
     mv downloads/elasticsearch-* downloads/elasticsearch
     ./downloads/elasticsearch/bin/plugin -install mobz/elasticsearch-head
-    ./downloads/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-cloud-aws/2.0.0.RC1
+    ./downloads/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-cloud-aws/2.1.1
     cp ../elasticsearch.yml downloads/elasticsearch/config
     cp ../logging.yml downloads/elasticsearch/config
     cp ../elasticsearch.in.sh downloads/elasticsearch/bin
@@ -40,7 +40,7 @@ fi
 
 cp ../scripts/delete-old-indexes.sh downloads
 
-tar czfv packages/frontend-logger/frontend-logger.tar.gz -C downloads elasticsearch elasticsearch.conf kibana nginx.conf nginx-sites.conf delete-old-indexes.sh
+tar czfv packages/mobile-logger/mobile-logger.tar.gz -C downloads elasticsearch elasticsearch.conf kibana nginx.conf nginx-sites.conf delete-old-indexes.sh
 cp ../deploy.json .
 zip -rv artifacts.zip packages/ deploy.json
 
