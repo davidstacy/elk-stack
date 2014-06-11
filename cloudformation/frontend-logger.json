@@ -1,0 +1,253 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Frontend - Logger",
+    "Parameters": {
+        "AvailabilityZones": {
+            "Type": "CommaDelimitedList",
+            "Default": "eu-west-1a,eu-west-1b,eu-west-1c"
+        },
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair for SSH access",
+            "Type": "String",
+            "Default": "ec2user"
+        },
+        "Stage": {
+            "Type": "String",
+            "AllowedValues": [ "PROD", "CODE" ],
+            "ConstraintDescription": "must be a valid stage."
+        }
+    },
+    "Resources": {
+        "Role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [ "ec2.amazonaws.com" ]
+                            }
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName":"LoggerServerPolicy",
+                        "PolicyDocument": {
+                            "Version" : "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": "ec2:DescribeInstances",
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "InstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [ { "Ref": "Role" } ]
+            }
+        },
+        "LoadBalancer": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "AvailabilityZones": {
+                    "Ref": "AvailabilityZones"
+                },
+                "CrossZone": true,
+                "Listeners": [
+                    {
+                        "Protocol": "HTTP",
+                        "LoadBalancerPort": "80",
+                        "InstancePort": "80"
+                    },
+                    {
+                        "Protocol": "HTTP",
+                        "LoadBalancerPort": "9200",
+                        "InstancePort": "9200"
+                    },
+                    {
+                        "Protocol": "TCP",
+                        "LoadBalancerPort": "6379",
+                        "InstancePort": "6379"
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": "HTTP:9200/",
+                    "Timeout": "10",
+                    "Interval": "20",
+                    "UnhealthyThreshold": "10",
+                    "HealthyThreshold": "2"
+                }
+            }
+        },
+        "AutoscalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AvailabilityZones": {
+                    "Ref": "AvailabilityZones"
+                },
+                "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+                "MinSize": "2",
+                "MaxSize": "4",
+                "DesiredCapacity": "2",
+                "HealthCheckType": "ELB",
+                "HealthCheckGracePeriod": 360,
+                "LoadBalancerNames": [ { "Ref": "LoadBalancer" } ],
+                "Tags": [
+                    {
+                        "Key": "Stage",
+                        "Value": {
+                            "Ref": "Stage"
+                        },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Role",
+                        "Value": "frontend-logger",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Mainclass",
+                        "Value": "frontend::logger",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Stack",
+                        "Value": "frontend-logger",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "App",
+                        "Value": "frontend-logger",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "logger",
+                        "PropagateAtLaunch": "true"
+                    }
+                ]
+            }
+        },
+        "LaunchConfig": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": "ami-89b1a3fd",
+                "SecurityGroups": [ { "Ref": "SecurityGroup" } ],
+                "InstanceType": "m1.large",
+                "KeyName": "loguser",
+                "IamInstanceProfile": { "Ref": "InstanceProfile" },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [ "\n", [
+                            "#!/usr/bin/env bash",
+
+                            "mkdir /data",
+                            "mount /dev/xvdb /data",
+
+                            "apt-get -y update",
+                            "apt-get -y install language-pack-en openjdk-7-jre-headless nginx",
+
+                            "sysctl vm.overcommit_memory=1",
+
+                            "adduser --disabled-password frontend-logger",
+                            "cd /home/frontend-logger",
+
+                            "mkdir logs",
+
+                            { "Fn::Join": [ "", [
+                                "wget https://s3-eu-west-1.amazonaws.com/aws-frontend-logger/",
+                                {"Ref": "Stage" },
+                                "/frontend-logger/frontend-logger.tar.gz"
+                             ] ] },
+
+                            "tar xfv frontend-logger.tar.gz",
+
+                            "ln -s /home/frontend-logger/delete-old-indexes.sh /etc/cron.daily/delete-old-indexes",
+
+                            { "Fn::Join": [ "", [ "sed -i",
+                                " -e 's,@@REGION,", { "Ref": "AWS::Region" }, ",g'",
+                                " -e 's,@@ROLE,frontend-logger,g'",
+                                " elasticsearch/config/elasticsearch.yml" ] ] },
+
+                            "chown -R frontend-logger /home/frontend-logger /data",
+                            "chgrp -R frontend-logger /home/frontend-logger /data",
+
+                            "rm /etc/nginx/sites-enabled/default",
+                            "mv nginx-sites.conf /etc/nginx/sites-enabled",
+
+                            "mv elasticsearch.conf /etc/init",
+                            "mv nginx.conf /etc/init",
+
+                            "sudo start elasticsearch",
+                            "sudo start nginx"
+                        ] ]
+                    }
+                }
+            }
+        },
+        "SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SSH, Elasticsearch, and HTTP",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "77.91.248.0/21"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupName": "amazon-elb-sg",
+                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "CidrIp": "77.91.248.0/21"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "SourceSecurityGroupName": "amazon-elb-sg",
+                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "SourceSecurityGroupName": "amazon-elb-sg",
+                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9300",
+                        "ToPort": "9300",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        }
+    }
+}
