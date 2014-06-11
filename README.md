@@ -1,9 +1,9 @@
-Flogger
-========
+ELK Stack
+=========
 
-Flogger machines run all the components required to store and visualise frontends diagnostic logs.
-* Elasticsearch
-* Kibana (via Nginx)
+The ELK stack is Elasticsearch, Logstash and Kibana used as a dedicated, stand-alone stack for logfile management.
+
+
 
 
 Architecture
