@@ -1,0 +1,20 @@
+{
+    "packages":{
+        "frontend-logger":{
+            "type": "autoscaling",
+            "apps": ["frontend::logger"],
+            "data": {
+                "artifact": "frontend-logger.tar.gz",
+                "bucket": "aws-frontend-logger"
+            }
+        }
+    },
+    "recipes":{
+        "default":{
+            "depends": ["artifactUpload"]
+        },
+        "artifactUpload":{
+            "actionsBeforeApp": ["frontend-logger.uploadArtifacts"]
+        }
+    }
+}
