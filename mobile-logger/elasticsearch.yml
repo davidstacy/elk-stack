@@ -29,7 +29,7 @@
 # Cluster name identifies your cluster for auto-discovery. If you're running
 # multiple clusters on the same network, make sure you're using unique names.
 #
-cluster.name: frontend-logger
+cluster.name: mobile-logger
 
 
 #################################### Node #####################################
@@ -144,7 +144,7 @@ index.translog.flush_threshold: 20000
 
 # Path to directory containing configuration (this file and logging.yml):
 #
-path.conf: /home/frontend-logger/elasticsearch/config
+path.conf: /home/mobile-logger/elasticsearch/config
 
 # Path to directory where to store index data allocated for this node.
 #
@@ -162,7 +162,7 @@ path.work: work
 
 # Path to log files:
 #
-path.logs: /home/frontend-logger/logs
+path.logs: /home/mobile-logger/logs
 
 # Path to where plugins are installed:
 #

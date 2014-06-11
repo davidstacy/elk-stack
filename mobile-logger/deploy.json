@@ -1,11 +1,11 @@
 {
     "packages":{
-        "frontend-logger":{
+        "mobile-logger":{
             "type": "autoscaling",
-            "apps": ["frontend::logger"],
+            "apps": ["mobile::logger"],
             "data": {
-                "artifact": "frontend-logger.tar.gz",
-                "bucket": "aws-frontend-logger"
+                "artifact": "mobile-logger.tar.gz",
+                "bucket": "aws-mobile-logger"
             }
         }
     },
@@ -14,7 +14,7 @@
             "depends": ["artifactUpload"]
         },
         "artifactUpload":{
-            "actionsBeforeApp": ["frontend-logger.uploadArtifacts"]
+            "actionsBeforeApp": ["mobile-logger.uploadArtifacts"]
         }
     }
 }

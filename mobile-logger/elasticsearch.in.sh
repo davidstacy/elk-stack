@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ES_HEAP_SIZE=4g
+ES_HEAP_SIZE=2g  # m3.medium => 2g, m3.xlarge => 4g
 ES_USE_GC_LOGGING="yes please"
 
 ES_CLASSPATH=$ES_CLASSPATH:$ES_HOME/lib/elasticsearch-*.jar:$ES_HOME/lib/*:$ES_HOME/lib/sigar/*
