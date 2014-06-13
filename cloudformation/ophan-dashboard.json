@@ -1,0 +1,262 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description" : "Live Stats Dashboard",
+    "Parameters" : {
+      "KeyName" : {
+        "Description" : "The EC2 Key Pair to allow SSH access to the instance",
+        "Type" : "String",
+        "Default" : "id_rsa_ec2"
+      },
+      "InstanceType" : {
+        "Description" : "WebServer EC2 instance type",
+        "Type" : "String",
+        "Default" : "m1.medium"
+      }
+    },
+
+  "Resources" : {
+
+    "OphanDashboardRole" : {
+      "Type" : "AWS::IAM::Role",
+      "Properties":{
+        "Path":"/",
+        "AssumeRolePolicyDocument": {
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": { "Service": [ "ec2.amazonaws.com" ] },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        }
+      }
+    },
+    "OphanDashboardDescribeEC2Policy" : {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "OphanDashboardDescribeEC2Policy",
+        "PolicyDocument": {
+          "Statement": [ {
+            "Action": ["EC2:Describe*"],
+            "Effect": "Allow",
+            "Resource":"*"
+          }]
+        },
+        "Roles": [ { "Ref": "OphanDashboardRole" } ]
+      }
+    },
+    "OphanDashboardDynamoDBPolicy" : {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "OphanDashboardDynamoDBPolicy",
+        "PolicyDocument": {
+          "Statement": [ {
+            "Action": ["dynamodb:*"],
+            "Effect": "Allow",
+            "Resource": [
+              "arn:aws:dynamodb:eu-west-1:021353022223:table/ophan-alerts",
+              "arn:aws:dynamodb:eu-west-1:021353022223:table/ophan-messages",
+              "arn:aws:dynamodb:eu-west-1:021353022223:table/ophan-time-machine",
+              "arn:aws:dynamodb:eu-west-1:021353022223:table/ophan-tweet-info"
+            ]
+          }]
+        },
+        "Roles": [ { "Ref": "OphanDashboardRole" } ]
+      }
+    },
+    "OphanDashboardInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ {
+          "Ref": "OphanDashboardRole"
+        } ]
+      }
+    },
+
+    "LoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "Listeners" : [ {
+            "LoadBalancerPort" : "80",
+            "InstancePort" : "9000",
+            "Protocol" : "HTTP"
+         } ],
+
+        "HealthCheck" : {
+            "Target" : "HTTP:9000/health-check",
+            "HealthyThreshold" : "2",
+            "UnhealthyThreshold" : "2",
+            "Interval" : "10",
+            "Timeout" : "5"
+         }
+      }
+    },
+
+
+    "AutoscalingGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+        "MinSize" : "3",
+        "MaxSize" : "6",
+        "DesiredCapacity" : "3",
+        "HealthCheckType" : "ELB",
+        "HealthCheckGracePeriod" : 300,
+        "LoadBalancerNames" : [ { "Ref": "LoadBalancer" }],
+        "Tags" : [
+          { "Key" : "Stage", "Value" : "PROD", "PropagateAtLaunch" : "true"  },
+          { "Key" : "Role", "Value" : "ophan-dashboard", "PropagateAtLaunch" : "true"  },
+          { "Key" : "Stack", "Value" : "ophan", "PropagateAtLaunch" : "true" },
+          { "Key" : "App", "Value" : "dashboard", "PropagateAtLaunch" : "true" },
+          { "Key" : "Management", "Value" : "port=9000", "PropagateAtLaunch" : "true" }
+        ],
+        "NotificationConfiguration" : {
+          "TopicARN" : "arn:aws:sns:eu-west-1:021353022223:ophan-service-notifications",
+          "NotificationTypes":  [
+            "autoscaling:EC2_INSTANCE_LAUNCH",
+            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+            "autoscaling:EC2_INSTANCE_TERMINATE",
+            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+          ]
+        }
+      }
+    },
+
+    "LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId":"ami-d5ec01a2",
+        "SecurityGroups": [
+            { "Ref" : "EC2SecurityGroup" },
+            "Ophan-ElasticSearch-PROD"
+        ],
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "IamInstanceProfile": { "Ref" : "OphanDashboardInstanceProfile" },
+        "UserData" : { "Fn::Base64": {
+            "Fn::Join":["", [
+                "#!/bin/bash -ev\n",
+                "apt-get -y update\n",
+                "locale-gen en_GB.UTF-8\n",
+                "apt-get -y install openjdk-7-jre-headless\n",
+
+                "adduser --system --home /ophan --disabled-password ophan\n",
+
+                "cat > /etc/stage <<EOF\n",
+                "PROD\n",
+                "EOF\n",
+
+                "wget https://s3-eu-west-1.amazonaws.com/ophan-dist/PROD/ophan-dashboard/ophan-dashboard.conf",
+                " --directory-prefix=/etc/init\n",
+
+                "wget https://s3-eu-west-1.amazonaws.com/ophan-dist/PROD/ophan-dashboard/app.jar",
+                " --directory-prefix=/ophan\n",
+
+                "chown ophan /ophan/*\n",
+
+                "start ophan-dashboard\n"
+            ]]
+
+        }}
+
+      }
+    },
+
+
+      "DashboardScaleUpPolicy" : {
+          "Type" : "AWS::AutoScaling::ScalingPolicy",
+          "Properties" : {
+              "AdjustmentType" : "ChangeInCapacity",
+              "AutoScalingGroupName" : { "Ref" : "AutoscalingGroup" },
+              "Cooldown" : "300",
+              "ScalingAdjustment" : "1"
+          }
+      },
+
+      "DashboardScaleDownPolicy" : {
+          "Type" : "AWS::AutoScaling::ScalingPolicy",
+          "Properties" : {
+              "AdjustmentType" : "ChangeInCapacity",
+              "AutoScalingGroupName" : { "Ref" : "AutoscalingGroup" },
+              "Cooldown" : "900",
+              "ScalingAdjustment" : "-1"
+          }
+      },
+
+
+      "DashboardCPUAlarmHigh": {
+          "Type": "AWS::CloudWatch::Alarm",
+          "Properties": {
+              "AlarmDescription": "Scale-up if CPU > 80% for 10 minutes",
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "Statistic": "Average",
+              "Period": "300",
+              "EvaluationPeriods": "2",
+              "Threshold": "80",
+              "AlarmActions": [ { "Ref": "DashboardScaleUpPolicy" } ],
+              "Dimensions": [
+                  {
+                      "Name": "AutoScalingGroupName",
+                      "Value": { "Ref": "AutoscalingGroup" }
+                  }
+              ],
+              "ComparisonOperator": "GreaterThanThreshold"
+          }
+      },
+      "DashboardCPUAlarmLow": {
+          "Type": "AWS::CloudWatch::Alarm",
+          "Properties": {
+              "AlarmDescription": "Scale-down if CPU < 50% for 10 minutes",
+              "MetricName": "CPUUtilization",
+              "Namespace": "AWS/EC2",
+              "Statistic": "Average",
+              "Period": "300",
+              "EvaluationPeriods": "2",
+              "Threshold": "50",
+              "AlarmActions": [ { "Ref": "DashboardScaleDownPolicy" } ],
+              "Dimensions": [
+                  {
+                      "Name": "AutoScalingGroupName",
+                      "Value": { "Ref": "AutoscalingGroup" }
+                  }
+              ],
+              "ComparisonOperator": "LessThanThreshold"
+          }
+      },
+
+    "EC2SecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "dashboard - ssh & http from kp and http to load balancer",
+        "SecurityGroupIngress" : [
+          { "IpProtocol": "tcp", "FromPort": "22",   "ToPort": "22",   "CidrIp": "77.91.248.0/21" },
+          { "IpProtocol": "tcp", "FromPort": "9000",   "ToPort": "9000",   "CidrIp": "0.0.0.0/0" },
+          { "IpProtocol": "tcp", "FromPort": "9000",   "ToPort": "9000",
+            "SourceSecurityGroupName": "amazon-elb-sg", "SourceSecurityGroupOwnerId": "amazon-elb" }
+        ]
+      }
+    },
+
+    "MainDnsEntry" : {
+      "Type" : "AWS::Route53::RecordSet",
+      "Properties" : {
+        "HostedZoneName" : "ophan.co.uk.",
+        "Comment" : "Dashboard public CNAME",
+        "Name" : "dashboard.ophan.co.uk",
+        "Type" : "CNAME",
+        "TTL" : "900",
+        "ResourceRecords" : [
+          {"Fn::GetAtt":["LoadBalancer","DNSName"]}
+        ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "LoadBalancerUrl" : {
+      "Value" : { "Ref" : "LoadBalancer" }
+    }
+  }
+}

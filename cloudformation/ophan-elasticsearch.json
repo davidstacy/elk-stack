@@ -1,0 +1,150 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Ophan - elasticsearch",
+  "Parameters": {
+    "KeyName": {
+      "Description": "The EC2 Key Pair to allow SSH access to the instance",
+      "Type": "String"
+    }
+  },
+
+  "Resources": {
+    "OphanElasticsearchRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Path": "/",
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "ec2.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        }
+      }
+    },
+    "OphanElasticsearchDescribeEC2Policy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "OphanElasticsearchDescribeEC2Policy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": ["EC2:Describe*"],
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ]
+        },
+        "Roles": [ { "Ref": "OphanElasticsearchRole" } ]
+      }
+    },
+
+    "OphanElasticsearchInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ { "Ref": "OphanElasticsearchRole" } ]
+      }
+    },
+
+    "AutoscalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": { "Fn::GetAZs": "" },
+        "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+        "MinSize": "1",
+        "MaxSize": "18",
+        "HealthCheckType": "EC2",
+        "HealthCheckGracePeriod": 120,
+        "LoadBalancerNames": [ ],
+        "Tags": [
+          { "Key" : "Stage", "Value" : "PROD", "PropagateAtLaunch": "true" },
+          { "Key" : "Stack", "Value" : "ophan", "PropagateAtLaunch" : "true" },
+          { "Key" : "App", "Value" : "elasticsearch", "PropagateAtLaunch" : "true" },
+          { "Key" : "Management", "Value" : "port=9200,format=elasticsearch", "PropagateAtLaunch" : "true" },
+          { "Key" : "Role", "Value" : "ophan-elasticsearch", "PropagateAtLaunch": "true" }
+        ]
+      }
+    },
+
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": { "Ref": "KeyName" },
+
+        "ImageId": "ami-d5ec01a2",
+        "SecurityGroups": [
+          { "Ref": "SshSecurityGroup" },
+          "Ophan-ElasticSearch-PROD"
+        ],
+        "InstanceType": "c3.4xlarge",
+        "IamInstanceProfile": { "Ref": "OphanElasticsearchInstanceProfile" },
+        "BlockDeviceMappings": [{
+            "DeviceName": "/dev/xvdc",
+            "VirtualName": "ephemeral0"
+        },{
+            "DeviceName": "/dev/xvdd",
+            "VirtualName": "ephemeral1"
+        }],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": ["", [
+              "#!/bin/bash -ev\n",
+              "apt-get -y update\n",
+              "apt-get -y install language-pack-en openjdk-7-jre-headless\n",
+
+              "umount /mnt\n",
+              "mkdir -p /mnt/0 /mnt/1\n",
+
+              "mkfs.ext4 /dev/xvdc\n",
+              "mount /dev/xvdc /mnt/0\n",
+              "mkfs.ext4 /dev/xvdd\n",
+              "mount /dev/xvdd /mnt/1\n",
+
+              "mkdir -p /mnt/0/ophan/logs /mnt/0/data /mnt/1/data\n",
+
+              "ln -s /mnt/0/ophan /ophan\n",
+              "ln -s /mnt/0/data /ophan/data0\n",
+              "ln -s /mnt/1/data /ophan/data1\n",
+
+              "adduser --system --home /ophan --disabled-password ophan\n",
+
+              "wget https://s3-eu-west-1.amazonaws.com/ophan-dist/PROD/ophan-elasticsearch/ophan-elasticsearch.conf",
+              " --directory-prefix=/etc/init\n",
+
+              "wget https://s3-eu-west-1.amazonaws.com/ophan-dist/PROD/ophan-elasticsearch/elasticsearch.tar.gz",
+              " --directory-prefix=/ophan\n",
+
+              "cd /ophan; tar xfv elasticsearch.tar.gz\n",
+
+              "chown -R ophan /ophan/* /mnt\n",
+              "chown ophan /ophan\n",
+
+              "start ophan-elasticsearch\n"
+            ]]
+          }
+        }
+      }
+    },
+
+    "SshSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Open up SSH access",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "77.91.248.0/21"
+          }
+        ]
+      }
+    }
+  }
+
+}

@@ -1,0 +1,310 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description": "ELK Stack - Elasticsearch, Logstash, Kibana",
+
+    "Parameters": {
+
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair for SSH access",
+            "Type": "String"
+        },
+        "Stage": {
+            "Description": "Stage",
+            "Type": "String",
+            "Default": "PROD",
+            "AllowedValues": [ "PROD", "CODE" ],
+            "ConstraintDescription": "must be a valid stage."
+        },
+        "Stack": {
+            "Description": "Application stack that will produce the logs",
+            "Type": "String",
+            "Default": { "Ref": "AWS:StackName" },
+            "Contstraint": "[a-zA-Z0-9]+"
+        },
+        "LogstashAutoscalingGroupSize": {
+            "Description": "Logstash Autoscale Size",
+            "Type": "Number",
+            "Default": "1",
+            "MinValue": 1,
+            "MaxValue": 12
+        },
+        "LogstashInstanceType": {
+            "Description": "Logstash EC2 instance type",
+            "Type": "String",
+            "Default": "t1.micro",
+            "AllowedValues": [
+                "t1.micro",
+                "m1.small",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type"
+        },
+         "ElasticseachAutoscalingGroupSize": {
+            "Description": "Elasticsearch Autoscale Size",
+            "Type": "Number",
+            "Default": "1",
+            "MinValue": 1,
+            "MaxValue": 12
+        },
+        "ElasticsearchInstanceType": {
+            "Description": "Elasticsearch EC2 instance type",
+            "Type": "String",
+            "Default": "m3.large",
+            "AllowedValues": [
+                "t1.micro",
+                "m1.small",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type"
+        },
+        "SSHLocation" : {
+            "Description" : "The IP address range that can be used to access the Kibana dashboard",
+            "Type": "String",
+            "MinLength": "9",
+            "MaxLength": "18",
+            "Default": "77.91.248.0/21",
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+        }
+
+    },
+
+    "Resources": {
+
+        "Role": {  # FIXME
+        },
+
+        "InstanceProfile": {  # FIXME
+        },
+
+        "LogstashLoadBalancer": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "AvailabilityZones": { "Fn::GetAZs": "" },
+                "CrossZone": true,
+                "Listeners": [
+                    {
+                        "Protocol": "TCP",
+                        "LoadBalancerPort": "6379",
+                        "InstancePort": "6379"
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": "TCP:6379",
+                    "Timeout": "5",
+                    "Interval": "10",
+                    "UnhealthyThreshold": "10",
+                    "HealthyThreshold": "2"
+                }
+            }
+
+        },
+
+        "LogstashAutoscalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AvailabilityZones": { "Fn::GetAZs": "" },
+                "LaunchConfigurationName": { "Ref": "LogstashLaunchConfig" },
+                "MinSize": "1",
+                "MaxSize": "12",
+                "DesiredCapacity": { "Ref": "LogstashAutoscalingGroupSize" },
+                "HealthCheckType": "ELB",
+                "HealthCheckGracePeriod": 120,
+                "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
+                "Tags": [
+                    {
+                        "Key": "Stage",
+                        "Value": { "Ref": "Stage" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Stack",
+                        "Value": { "Ref": "Stack" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "App",
+                        "Value": "logger",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": { "Fn::Join":[ "-", [ { "Ref": "Stack" }, "logger" ] ] },
+                        "PropagateAtLaunch": "true"
+                    }
+                ]
+            }
+        },
+
+        "LogstashLaunchConfig": {  # FIXME
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": "ami-ef3ffa98",
+                "SecurityGroups": [ { "Ref": "LogstashSecurityGroup" } ],
+                "InstanceType": { "Ref": "LogstashInstanceType" },
+                "KeyName": { "Ref": "KeyName" },
+                "IamInstanceProfile": { "Ref": "InstanceProfile" },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [ "", [
+                            "#!/bin/bash -v",
+
+                            "wget -O - http://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add -",
+                            "echo \"deb http://packages.elasticsearch.org/logstash/1.4/debian stable main\" > /etc/apt/sources.list.d/logstash.list",
+
+                            "apt-get -y update",
+                            "apt-get -y install language-pack-en openjdk-7-jre-headless logstash",
+
+                            "wget -O /etc/logstash/conf.d/logstash.conf source???",
+
+                            "start logstash"
+                        ] ]
+                    }
+                }
+            }
+        },
+
+        "LogstashSecurityGroup": {  # FIXME
+
+        },
+
+        "ElasticsearchLoadBalancer": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "AvailabilityZones": { "Fn::GetAZs": "" },
+                "CrossZone": true,
+                "Listeners": [
+                {
+                    "Protocol": "HTTP",
+                    "LoadBalancerPort": "80",
+                    "InstancePort": "80"
+                    },
+                    {
+                        "Protocol": "HTTP",
+                        "LoadBalancerPort": "9200",
+                        "InstancePort": "9200"
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": "HTTP:9200/",
+                    "Timeout": "10",
+                    "Interval": "20",
+                    "UnhealthyThreshold": "10",
+                    "HealthyThreshold": "2"
+                }
+            }
+        },
+
+        "ElasticsearchAutoscalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AvailabilityZones": { "Fn::GetAZs": "" },
+                "LaunchConfigurationName": { "Ref": "ElasticsearchLaunchConfig" },
+                "MinSize": "1",
+                "MaxSize": "12",
+                "DesiredCapacity": { "Ref": "ElasticsearchAutoscalingGroupSize" },
+                "HealthCheckType": "ELB",
+                "HealthCheckGracePeriod": 120,
+                "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
+                "Tags": [
+                    {
+                        "Key": "Stage",
+                        "Value": { "Ref": "Stage" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Stack",
+                        "Value": { "Ref": "Stack" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "App",
+                        "Value": "elasticsearch",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": { "Fn::Join":[ "-", [ { "Ref": "Stack" }, "elasticsearch" ] ] },
+                        "PropagateAtLaunch": "true"
+                    }
+                ]
+            }
+        },
+
+        "ElasticsearchLaunchConfig": {  # FIXME
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": "ami-ef3ffa98",
+                "SecurityGroups": [ { "Ref": "ElasticsearchSecurityGroup" } ],
+                "InstanceType": { "Ref": "ElasticsearchInstanceType" },
+                "KeyName": { "Ref": "KeyName" },
+                "IamInstanceProfile": { "Ref": "InstanceProfile" },
+
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [ "\n", [
+                            "#!/bin/bash -v",
+
+                            "wget -O - http://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add -",
+                            "echo \"deb http://packages.elasticsearch.org/elasticsearch/1.1/debian stable main\" > /etc/apt/sources.list.d/elasticsearch.list",
+
+                            "apt-get -y update",
+                            "apt-get -y install language-pack-en openjdk-7-jre-headless elasticsearch nginx",
+
+                            "/usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-cloud-aws/2.1.1",
+                            "/usr/share/elasticsearch/bin/plugin --install mobz/elasticsearch-head",
+                            "/usr/share/elasticsearch/bin/plugin --install lukas-vlcek/bigdesk",
+                            "/usr/share/elasticsearch/bin/plugin --install karmi/elasticsearch-paramedic",
+                            "/usr/share/elasticsearch/bin/plugin --install royrusso/elasticsearch-HQ",
+
+                            "cd /usr/share/nginx/html",
+                            "wget http://download.elasticsearch.org/kibana/kibana/kibana-latest.tar.gz",
+                            "tar zxvf kibana-latest.tar.gz",
+                            "mv kibana-latest kibana",
+
+
+                            "mkdir /data",
+                            "mount /dev/xvdb /data",
+
+                            "sysctl vm.overcommit_memory=1",
+
+                            "rm /etc/nginx/sites-enabled/default",   #
+                            "mv nginx-sites.conf /etc/nginx/sites-enabled", #
+
+                            "start elasticsearch",
+                            "start nginx"
+                        ] ]
+                    }
+                }
+            }
+        },
+        "ElasticsearchSecurityGroup" : {  # FIXME
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "Enable HTTP access via port 80 plus SSH access",
+                "SecurityGroupIngress" : [
+                {"IpProtocol" : "tcp", "FromPort" : "9200", "ToPort" : "9200", "CidrIp" : "0.0.0.0/0"},
+                {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}}
+                ]
+            }
+        }
+    },
+
+    "Outputs": {
+        "LogstashEndpoint": {
+            "Value": { "Fn::Join": ["", [ { "Fn::GetAtt": [ "LogstashLoadBalancer", "PublicDnsName" ]}, ":6379"]] },
+            "Description": "Logging endpoint for Logstash TCP input"
+        },
+        "KibanaURL": {
+            "Value": { "Fn::Join": ["", ["http://", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "PublicDnsName" ]}]] },
+            "Description": "URL for the Kibana Dashboard"
+        }
+    }
+}
