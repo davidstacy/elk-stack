@@ -105,7 +105,7 @@
                     },
                     {
                         "Key": "Stack",
-                        "Value": { "Ref": "Stack" },
+                        "Value": { "Ref": "AWS::StackName" },
                         "PropagateAtLaunch": "true"
                     },
                     {
@@ -115,7 +115,7 @@
                     },
                     {
                         "Key": "Name",
-                        "Value": { "Fn::Join":[ "-", [ { "Ref": "Stack" }, "logstash" ] ] },
+                        "Value": { "Fn::Join":[ "-", [ { "Ref": "AWS::StackName" }, "logstash" ] ] },
                         "PropagateAtLaunch": "true"
                     }
                 ]
@@ -257,7 +257,7 @@
                     },
                     {
                         "Key": "Stack",
-                        "Value": { "Ref": "Stack" },
+                        "Value": { "Ref": "AWS::StackName" },
                         "PropagateAtLaunch": "true"
                     },
                     {
@@ -267,7 +267,7 @@
                     },
                     {
                         "Key": "Name",
-                        "Value": { "Fn::Join":[ "-", [ { "Ref": "Stack" }, "elasticsearch" ] ] },
+                        "Value": { "Fn::Join":[ "-", [ { "Ref": "AWS::StackName" }, "elasticsearch" ] ] },
                         "PropagateAtLaunch": "true"
                     }
                 ]
