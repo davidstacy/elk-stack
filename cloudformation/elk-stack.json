@@ -17,7 +17,7 @@
             "AllowedValues": [ "PROD", "CODE" ],
             "ConstraintDescription": "must be a valid stage eg. PROD, CODE"
         },
-        "LogstashDesiredCapacity": {
+        "LogstashCapacity": {
             "Description": "Logstash Autoscale Size",
             "Type": "Number",
             "Default": "1",
@@ -38,7 +38,7 @@
             ],
             "ConstraintDescription": "must be a valid EC2 instance type"
         },
-         "ElasticsearchDesiredCapacity": {
+         "ElasticsearchCapacity": {
             "Description": "Elasticsearch Autoscale Size",
             "Type": "Number",
             "Default": 1,
@@ -93,7 +93,7 @@
                 "LaunchConfigurationName": { "Ref": "LogstashLaunchConfig" },
                 "MinSize": "1",
                 "MaxSize": "12",
-                "DesiredCapacity": { "Ref": "LogstashDesiredCapacity" },
+                "DesiredCapacity": { "Ref": "LogstashCapacity" },
                 "HealthCheckType": "ELB",
                 "HealthCheckGracePeriod": 120,
                 "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
@@ -245,7 +245,7 @@
                 "LaunchConfigurationName": { "Ref": "ElasticsearchLaunchConfig" },
                 "MinSize": "1",
                 "MaxSize": "12",
-                "DesiredCapacity": { "Ref": "ElasticsearchDesiredCapacity" },
+                "DesiredCapacity": { "Ref": "ElasticsearchCapacity" },
                 "HealthCheckType": "ELB",
                 "HealthCheckGracePeriod": 120,
                 "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
