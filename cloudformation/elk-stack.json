@@ -14,15 +14,14 @@
             "Type": "String",
             "Default": "PROD",
             "AllowedValues": [ "PROD", "CODE" ],
-            "ConstraintDescription": "must be a valid stage."
+            "ConstraintDescription": "must be a valid stage eg. PROD, CODE"
         },
         "Stack": {
             "Description": "Application stack that will produce the logs",
             "Type": "String",
-            "Default": { "Ref": "AWS:StackName" },
             "AllowedPattern": "[a-zA-Z0-9]+"
         },
-        "LogstashAutoscalingGroupSize": {
+        "LogstashDesiredCapacity": {
             "Description": "Logstash Autoscale Size",
             "Type": "Number",
             "Default": "1",
@@ -43,7 +42,7 @@
             ],
             "ConstraintDescription": "must be a valid EC2 instance type"
         },
-         "ElasticseachAutoscalingGroupSize": {
+         "ElasticsearchDesiredCapacity": {
             "Description": "Elasticsearch Autoscale Size",
             "Type": "Number",
             "Default": 1,
@@ -98,7 +97,7 @@
                 "LaunchConfigurationName": { "Ref": "LogstashLaunchConfig" },
                 "MinSize": "1",
                 "MaxSize": "12",
-                "DesiredCapacity": { "Ref": "LogstashAutoscalingGroupSize" },
+                "DesiredCapacity": { "Ref": "LogstashDesiredCapacity" },
                 "HealthCheckType": "ELB",
                 "HealthCheckGracePeriod": 120,
                 "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
@@ -250,7 +249,7 @@
                 "LaunchConfigurationName": { "Ref": "ElasticsearchLaunchConfig" },
                 "MinSize": "1",
                 "MaxSize": "12",
-                "DesiredCapacity": { "Ref": "ElasticsearchAutoscalingGroupSize" },
+                "DesiredCapacity": { "Ref": "ElasticsearchDesiredCapacity" },
                 "HealthCheckType": "ELB",
                 "HealthCheckGracePeriod": 120,
                 "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
@@ -350,25 +349,29 @@
                         "FromPort": "22",
                         "ToPort": "22",
                         "CidrIp": "77.91.248.0/21"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "9300",
-                        "ToPort": "9300",
-                        "SourceSecurityGroupId": { "Ref": "ElasticsearchSecurityGroup"}
                     }
                 ]
+            }
+        },
+        "ElasticsearchSecurityGroupIngress": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupName": { "Ref": "ElasticsearchSecurityGroup" },
+                "IpProtocol": "tcp",
+                "FromPort": "9300",
+                "ToPort": "9300",
+                "SourceSecurityGroupName": { "Ref": "ElasticsearchSecurityGroup"}
             }
         }
     },
 
     "Outputs": {
         "LogstashEndpoint": {
-            "Value": { "Fn::Join": ["", [ { "Fn::GetAtt": [ "LogstashLoadBalancer", "PublicDnsName" ]}, ":6379"]] },
+            "Value": { "Fn::Join": ["", [ { "Fn::GetAtt": [ "LogstashLoadBalancer", "DNSName" ]}, ":6379"]] },
             "Description": "Logging endpoint for Logstash TCP input"
         },
         "KibanaURL": {
-            "Value": { "Fn::Join": ["", ["http://", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "PublicDnsName" ]}]] },
+            "Value": { "Fn::Join": ["", ["http://", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "DNSName" ]}]] },
             "Description": "URL for the Kibana Dashboard"
         }
     }
