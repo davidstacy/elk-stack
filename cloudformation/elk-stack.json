@@ -6,6 +6,7 @@
     "Parameters": {
 
         "KeyName": {
+            "Default": "bootstrap",
             "Description": "Name of an existing EC2 KeyPair for SSH access",
             "Type": "String"
         },
@@ -15,11 +16,6 @@
             "Default": "PROD",
             "AllowedValues": [ "PROD", "CODE" ],
             "ConstraintDescription": "must be a valid stage eg. PROD, CODE"
-        },
-        "Stack": {
-            "Description": "Application stack that will produce the logs",
-            "Type": "String",
-            "AllowedPattern": "[a-zA-Z0-9]+"
         },
         "LogstashDesiredCapacity": {
             "Description": "Logstash Autoscale Size",
@@ -114,12 +110,12 @@
                     },
                     {
                         "Key": "App",
-                        "Value": "logger",
+                        "Value": "logstash",
                         "PropagateAtLaunch": "true"
                     },
                     {
                         "Key": "Name",
-                        "Value": { "Fn::Join":[ "-", [ { "Ref": "Stack" }, "logger" ] ] },
+                        "Value": { "Fn::Join":[ "-", [ { "Ref": "Stack" }, "logstash" ] ] },
                         "PropagateAtLaunch": "true"
                     }
                 ]
