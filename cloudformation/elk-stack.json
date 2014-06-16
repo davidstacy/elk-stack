@@ -20,7 +20,7 @@
             "Description": "Application stack that will produce the logs",
             "Type": "String",
             "Default": { "Ref": "AWS:StackName" },
-            "Contstraint": "[a-zA-Z0-9]+"
+            "AllowedPattern": "[a-zA-Z0-9]+"
         },
         "LogstashAutoscalingGroupSize": {
             "Description": "Logstash Autoscale Size",
@@ -46,7 +46,7 @@
          "ElasticseachAutoscalingGroupSize": {
             "Description": "Elasticsearch Autoscale Size",
             "Type": "Number",
-            "Default": "1",
+            "Default": 1,
             "MinValue": 1,
             "MaxValue": 12
         },
@@ -63,26 +63,10 @@
                 "m3.2xlarge"
             ],
             "ConstraintDescription": "must be a valid EC2 instance type"
-        },
-        "SSHLocation" : {
-            "Description" : "The IP address range that can be used to access the Kibana dashboard",
-            "Type": "String",
-            "MinLength": "9",
-            "MaxLength": "18",
-            "Default": "77.91.248.0/21",
-            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
-            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
         }
-
     },
 
     "Resources": {
-
-        "Role": {  # FIXME
-        },
-
-        "InstanceProfile": {  # FIXME
-        },
 
         "LogstashLoadBalancer": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
@@ -143,14 +127,13 @@
             }
         },
 
-        "LogstashLaunchConfig": {  # FIXME
+        "LogstashLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
                 "ImageId": "ami-ef3ffa98",
                 "SecurityGroups": [ { "Ref": "LogstashSecurityGroup" } ],
                 "InstanceType": { "Ref": "LogstashInstanceType" },
                 "KeyName": { "Ref": "KeyName" },
-                "IamInstanceProfile": { "Ref": "InstanceProfile" },
                 "UserData": {
                     "Fn::Base64": {
                         "Fn::Join": [ "", [
@@ -162,7 +145,7 @@
                             "apt-get -y update",
                             "apt-get -y install language-pack-en openjdk-7-jre-headless logstash",
 
-                            "wget -O /etc/logstash/conf.d/logstash.conf source???",
+                            "# wget -O /etc/logstash/conf.d/logstash.conf source???",
 
                             "start logstash"
                         ] ]
@@ -171,8 +154,66 @@
             }
         },
 
-        "LogstashSecurityGroup": {  # FIXME
+        "LogstashSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SSH, Elasticsearch, and HTTP",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "SourceSecurityGroupName": "amazon-elb-sg",
+                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "77.91.248.0/21"
+                    }
+                ]
+            }
+        },
 
+        "Role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [ "ec2.amazonaws.com" ]
+                            }
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName":"LoggerServerPolicy",
+                        "PolicyDocument": {
+                            "Version" : "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": "ec2:DescribeInstances",
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "InstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [ { "Ref": "Role" } ]
+            }
         },
 
         "ElasticsearchLoadBalancer": {
@@ -238,7 +279,7 @@
             }
         },
 
-        "ElasticsearchLaunchConfig": {  # FIXME
+        "ElasticsearchLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
                 "ImageId": "ami-ef3ffa98",
@@ -275,8 +316,8 @@
 
                             "sysctl vm.overcommit_memory=1",
 
-                            "rm /etc/nginx/sites-enabled/default",   #
-                            "mv nginx-sites.conf /etc/nginx/sites-enabled", #
+                            "rm /etc/nginx/sites-enabled/default",
+                            "mv nginx-sites.conf /etc/nginx/sites-enabled",
 
                             "start elasticsearch",
                             "start nginx"
@@ -285,13 +326,37 @@
                 }
             }
         },
-        "ElasticsearchSecurityGroup" : {  # FIXME
-            "Type" : "AWS::EC2::SecurityGroup",
-            "Properties" : {
-                "GroupDescription" : "Enable HTTP access via port 80 plus SSH access",
-                "SecurityGroupIngress" : [
-                {"IpProtocol" : "tcp", "FromPort" : "9200", "ToPort" : "9200", "CidrIp" : "0.0.0.0/0"},
-                {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}}
+        "ElasticsearchSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SSH, Elasticsearch, and HTTP",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupName": "amazon-elb-sg",
+                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "SourceSecurityGroupName": "amazon-elb-sg",
+                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "77.91.248.0/21"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9300",
+                        "ToPort": "9300",
+                        "SourceSecurityGroupId": { "Ref": "ElasticsearchSecurityGroup"}
+                    }
                 ]
             }
         }
