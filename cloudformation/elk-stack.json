@@ -125,7 +125,7 @@
         "LogstashLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
-                "ImageId": "ami-ef3ffa98",
+                "ImageId": "ami-cb4986bc",
                 "SecurityGroups": [ { "Ref": "LogstashSecurityGroup" } ],
                 "InstanceType": { "Ref": "LogstashInstanceType" },
                 "KeyName": { "Ref": "KeyName" },
@@ -277,7 +277,7 @@
         "ElasticsearchLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
-                "ImageId": "ami-ef3ffa98",
+                "ImageId": "ami-cb4986bc",
                 "SecurityGroups": [ { "Ref": "ElasticsearchSecurityGroup" } ],
                 "InstanceType": { "Ref": "ElasticsearchInstanceType" },
                 "KeyName": { "Ref": "KeyName" },
