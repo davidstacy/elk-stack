@@ -95,7 +95,7 @@
                 "MaxSize": "12",
                 "DesiredCapacity": { "Ref": "LogstashCapacity" },
                 "HealthCheckType": "ELB",
-                "HealthCheckGracePeriod": 120,
+                "HealthCheckGracePeriod": 3600,
                 "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
                 "Tags": [
                     {
@@ -131,7 +131,7 @@
                 "KeyName": { "Ref": "KeyName" },
                 "UserData": {
                     "Fn::Base64": {
-                        "Fn::Join": [ "", [
+                        "Fn::Join": [ "\n", [
                             "#!/bin/bash -v",
 
                             "wget -O - http://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add -",
@@ -140,7 +140,11 @@
                             "apt-get -y update",
                             "apt-get -y install language-pack-en openjdk-7-jre-headless logstash",
 
-                            "# wget -O /etc/logstash/conf.d/logstash.conf source???",
+                            "wget -O /etc/logstash/conf.d/logstash-indexer.conf https://raw.githubusercontent.com/satterly/elk-stack/master/config/logstash-indexer.conf",
+
+                            { "Fn::Join": [ "", [ "sed -i",
+                                " -e 's,@@ELASTICSEARCH,", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "DNSName" ]} ",g'",
+                                " /etc/logstash/conf.d/logstash-indexer.conf" ] ] },
 
                             "start logstash"
                         ] ]
@@ -247,7 +251,7 @@
                 "MaxSize": "12",
                 "DesiredCapacity": { "Ref": "ElasticsearchCapacity" },
                 "HealthCheckType": "ELB",
-                "HealthCheckGracePeriod": 120,
+                "HealthCheckGracePeriod": 3600,
                 "LoadBalancerNames": [ { "Ref": "LogstashLoadBalancer" } ],
                 "Tags": [
                     {
