@@ -29,7 +29,7 @@
 # Cluster name identifies your cluster for auto-discovery. If you're running
 # multiple clusters on the same network, make sure you're using unique names.
 #
-# cluster.name: elasticsearch
+cluster.name: logger
 
 
 #################################### Node #####################################
@@ -104,11 +104,11 @@
 
 # Set the number of shards (splits) of an index (5 by default):
 #
-# index.number_of_shards: 5
+index.number_of_shards: 3
 
 # Set the number of replicas (additional copies) of an index (1 by default):
 #
-# index.number_of_replicas: 1
+index.number_of_replicas: 1
 
 # Note, that for development on a local machine, with small indices, it usually
 # makes sense to "disable" the distributed features:
@@ -137,12 +137,14 @@
 # Use the Index Status API (<http://localhost:9200/A/_status>) to inspect
 # the index status.
 
+index.refresh_interval: 10s
+index.translog.flush_threshold: 20000
 
 #################################### Paths ####################################
 
 # Path to directory containing configuration (this file and logging.yml):
 #
-# path.conf: /path/to/conf
+path.conf: /etc/elasticsearch/
 
 # Path to directory where to store index data allocated for this node.
 #
@@ -152,15 +154,15 @@
 # the locations (a la RAID 0) on a file level, favouring locations with most free
 # space on creation. For example:
 #
-# path.data: /path/to/data1,/path/to/data2
+path.data: /data
 
 # Path to temporary files:
 #
-# path.work: /path/to/work
+path.work: work
 
 # Path to log files:
 #
-# path.logs: /path/to/logs
+path.logs: /var/log
 
 # Path to where plugins are installed:
 #
@@ -171,7 +173,7 @@
 
 # If a plugin listed here is not installed for current node, the node will not start.
 #
-# plugin.mandatory: mapper-attachments,lang-groovy
+plugin.mandatory: cloud-aws
 
 
 ################################### Memory ####################################
@@ -280,7 +282,8 @@
 #
 # 2. During adding/removing nodes, rebalancing, etc
 #
-# cluster.routing.allocation.node_concurrent_recoveries: 2
+cluster.routing.allocation.cluster_concurrent_rebalance: 20
+cluster.routing.allocation.node_concurrent_recoveries: 5
 
 # Set to throttle throughput when recovering (eg. 100mb, by default 20mb):
 #
@@ -291,6 +294,7 @@
 #
 # indices.recovery.concurrent_streams: 5
 
+indices.memory.index_buffer_size: 20%
 
 ################################## Discovery ##################################
 
@@ -335,6 +339,10 @@
 # See <http://elasticsearch.org/tutorials/elasticsearch-on-ec2/>
 # for a step-by-step tutorial.
 
+discovery.type: ec2
+
+cloud.aws.region: @@REGION
+
 # GCE discovery allows to use Google Compute Engine API in order to perform discovery.
 #
 # You have to install the cloud-gce plugin for enabling the GCE discovery.
@@ -376,3 +384,7 @@
 #monitor.jvm.gc.old.info: 5s
 #monitor.jvm.gc.old.debug: 2s
 
+################################# Index Actions ##############################
+
+action.auto_create_index: true
+action.disable_delete_all_indices: true

@@ -304,12 +304,18 @@
                             "/usr/share/elasticsearch/bin/plugin --install karmi/elasticsearch-paramedic",
                             "/usr/share/elasticsearch/bin/plugin --install royrusso/elasticsearch-HQ",
 
+                            "wget -O /etc/elasticsearch/elasticsearch.yml https://raw.githubusercontent.com/satterly/elk-stack/master/config/elasticsearch.yml",
+                            { "Fn::Join": [ "", [ "sed -i",
+                                " -e 's,@@REGION,", { "Ref": "AWS::Region" }, ",g'",
+                                " /etc/elasticsearch/elasticsearch.yml" ] ] },
+
                             "wget -O /etc/init/elasticsearch.conf https://raw.githubusercontent.com/satterly/elk-stack/master/config/upstart-elasticsearch.conf",
 
-                            "# mkdir -m 000 /data",
-                            "# mount /dev/xvdb /data",
+                            "umount /mnt"
+                            "mkdir -m 000 /data",
+                            "mount /dev/xvdb /data",
 
-                            "# sysctl vm.overcommit_memory=1",
+                            "sysctl vm.overcommit_memory=1",
 
                             "cd /usr/share/nginx/html",
                             "wget http://download.elasticsearch.org/kibana/kibana/kibana-latest.tar.gz",
