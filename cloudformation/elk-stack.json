@@ -143,7 +143,7 @@
                             "wget -O /etc/logstash/conf.d/logstash-indexer.conf https://raw.githubusercontent.com/satterly/elk-stack/master/config/logstash-indexer.conf",
 
                             { "Fn::Join": [ "", [ "sed -i",
-                                " -e 's,@@ELASTICSEARCH,", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "DNSName" ]} ",g'",
+                                " -e 's,@@ELASTICSEARCH,", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "DNSName" ]}, ",g'",
                                 " /etc/logstash/conf.d/logstash-indexer.conf" ] ] },
 
                             "start logstash"
