@@ -251,7 +251,7 @@
                 "MaxSize": "12",
                 "DesiredCapacity": { "Ref": "ElasticsearchCapacity" },
                 "HealthCheckType": "ELB",
-                "HealthCheckGracePeriod": 3600,
+                "HealthCheckGracePeriod": 300,
                 "LoadBalancerNames": [ { "Ref": "ElasticsearchLoadBalancer" } ],
                 "Tags": [
                     {
