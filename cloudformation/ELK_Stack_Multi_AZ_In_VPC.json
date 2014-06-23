@@ -161,6 +161,30 @@
             }
         },
 
+        "LogstashLoadBalancerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": { "Ref": "VpcId" },
+                "GroupDescription": "Open up HTTP access to load balancer",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
         "LogstashSecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
@@ -171,8 +195,7 @@
                         "IpProtocol": "tcp",
                         "FromPort": "6379",
                         "ToPort": "6379",
-                        "SourceSecurityGroupName": "amazon-elb-sg",
-                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                        "SourceSecurityGroupId": { "Ref": "LogstashLoadBalancerSecurityGroup" }
                     },
                     {
                         "IpProtocol": "tcp",
@@ -223,6 +246,7 @@
                 "Roles": [ { "Ref": "Role" } ]
             }
         },
+
 
         "ElasticsearchLoadBalancer": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
@@ -343,6 +367,42 @@
             }
         },
 
+        "ElasticsearchLoadBalancerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": { "Ref": "VpcId" },
+                "GroupDescription": "Open up HTTP access to load balancer",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "9200",
+                        "ToPort": "9200",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
         "ElasticsearchSecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
@@ -353,15 +413,13 @@
                         "IpProtocol": "tcp",
                         "FromPort": "80",
                         "ToPort": "80",
-                        "SourceSecurityGroupName": "amazon-elb-sg",
-                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                        "SourceSecurityGroupId": { "Ref": "ElasticsearchLoadBalancerSecurityGroup" }
                     },
                     {
                         "IpProtocol": "tcp",
                         "FromPort": "9200",
                         "ToPort": "9200",
-                        "SourceSecurityGroupName": "amazon-elb-sg",
-                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                        "SourceSecurityGroupId": { "Ref": "ElasticsearchLoadBalancerSecurityGroup" }
                     },
                     {
                         "IpProtocol": "tcp",
