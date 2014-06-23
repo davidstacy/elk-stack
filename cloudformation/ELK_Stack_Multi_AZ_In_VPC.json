@@ -74,7 +74,6 @@
         "LogstashLoadBalancer": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties": {
-                "AvailabilityZones": { "Fn::GetAZs": "" },
                 "CrossZone": true,
                 "Listeners": [
                     {
@@ -228,7 +227,6 @@
         "ElasticsearchLoadBalancer": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties": {
-                "AvailabilityZones": { "Fn::GetAZs": "" },
                 "CrossZone": true,
                 "Listeners": [
                     {
