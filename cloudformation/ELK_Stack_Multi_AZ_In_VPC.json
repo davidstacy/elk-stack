@@ -433,11 +433,11 @@
         "ElasticsearchSecurityGroupIngress": {
             "Type": "AWS::EC2::SecurityGroupIngress",
             "Properties": {
-                "GroupName": { "Ref": "ElasticsearchSecurityGroup" },
+                "GroupId": { "Fn::GetAtt": [ "ElasticsearchSecurityGroup", "GroupId" ] },
                 "IpProtocol": "tcp",
                 "FromPort": "9300",
                 "ToPort": "9300",
-                "SourceSecurityGroupName": { "Ref": "ElasticsearchSecurityGroup"}
+                "SourceSecurityGroupId": { "Fn::GetAtt": [ "ElasticsearchSecurityGroup", "GroupId" ] }
             }
         }
     },
