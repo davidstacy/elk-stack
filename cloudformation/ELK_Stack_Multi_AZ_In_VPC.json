@@ -89,7 +89,10 @@
                     "UnhealthyThreshold": "10",
                     "HealthyThreshold": "2"
                 },
-                "Subnets": { "Ref": "VpcSubnets" }
+                "Subnets": { "Ref": "VpcSubnets" },
+                "SecurityGroups": [
+                    { "Ref": "LogstashLoadBalancerSecurityGroup" }
+                ]
             }
         },
 
@@ -272,7 +275,10 @@
                     "UnhealthyThreshold": "10",
                     "HealthyThreshold": "2"
                 },
-                "Subnets": { "Ref": "VpcSubnets" }
+                "Subnets": { "Ref": "VpcSubnets" },
+                "SecurityGroups": [
+                    { "Ref": "ElasticsearchLoadBalancerSecurityGroup" }
+                ]
             }
         },
 
