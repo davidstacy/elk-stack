@@ -136,6 +136,7 @@
                 "ImageId": "ami-cb4986bc",
                 "SecurityGroups": [ { "Ref": "LogstashSecurityGroup" } ],
                 "InstanceType": { "Ref": "LogstashInstanceType" },
+                "AssociatePublicIpAddress": "True",
                 "KeyName": { "Ref": "KeyName" },
                 "UserData": {
                     "Fn::Base64": {
@@ -318,6 +319,7 @@
                 "ImageId": "ami-cb4986bc",
                 "SecurityGroups": [ { "Ref": "ElasticsearchSecurityGroup" } ],
                 "InstanceType": { "Ref": "ElasticsearchInstanceType" },
+                "AssociatePublicIpAddress": "True",
                 "KeyName": { "Ref": "KeyName" },
                 "IamInstanceProfile": { "Ref": "InstanceProfile" },
 
