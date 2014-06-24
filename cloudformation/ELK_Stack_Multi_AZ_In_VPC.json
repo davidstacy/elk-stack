@@ -441,7 +441,7 @@
                 "GroupId": { "Fn::GetAtt": [ "ElasticsearchSecurityGroup", "GroupId" ] },
                 "IpProtocol": "tcp",
                 "FromPort": "9300",
-                "ToPort": "9300",
+                "ToPort": "9305",
                 "SourceSecurityGroupId": { "Fn::GetAtt": [ "ElasticsearchSecurityGroup", "GroupId" ] }
             }
         }
