@@ -1,27 +1,25 @@
 ELK Stack
 =========
 
-The ELK stack is Elasticsearch, Logstash and Kibana used as a dedicated, stand-alone stack for logfile management.
-
-
+An [ELK stack](http://www.elasticsearch.org/webinars/elk-stack-devops-environment/) is a stand-alone log management stack based on Elasticsearch, Logstash and Kibana that can be easily and quickly deployed into any AWS EC2 account .
 
 
 Architecture
 ------------
 
-Each of frontend diagnostic machines run the Logstash agent, which tails the Play log files on that machine, and ships them over to the Elastic search instance inside Flogger.
+Each of your application servers that you want to send to Elasticsearch will need to run the Logstash agent, which will tail any log file on that machine. For example, a Play applicaiton request log file. and ship them to Logstash servers. The logstash servers receive the logs and index them in Elasticsearch. Kibana is used to visualise the logs in a web client.
 
-The machines also run Nginx which is used to serve up Kibana, a nice interface to the whole thing.
+The Logstash instances sit behind a load balancer. The logstash agents point to this.
 
-The Flogger instances sit behind a load balancer. The Logstash agents point to a this, which should distribute both the indexing load and the Elasticsearch cluster itself.
+The Elasticsearch instances also sit behind a load balancer. The logstash servers and Kibana web client point to this.
 
-It runs on EC2 machines through Autoscaling in Cloudformation. They run Ubuntu 12.04 LTS (the Precise Pangolin). You can SSH onto these machines with the `ubuntu` user, given you have our keyfile. Most of our things live in `/home/flogger/`.
+Deploying
+---------
 
-All of the components are run through Upstart.
+Deploy the stack using the AWS console to launch a CloudFormation stack or use the command-line like so:
 
-
-Building and deploying
-----------------------
+    $ pip install awscli
+    $ aws cloudformation create-stack --stack-name myteststack --template-body file:////home//local//test//sampletemplate.json
 
 The build server runs `build.sh`, which downloads each of these elements and adds in our various configuration files, producing a deployable artifact. This script is where the various versions are specified.
 
