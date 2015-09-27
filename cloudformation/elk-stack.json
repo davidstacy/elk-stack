@@ -6,8 +6,8 @@
     "Parameters": {
 
         "KeyName": {
-            "Default": "bootstrap",
-            "Description": "Name of an existing EC2 KeyPair for SSH access",
+            "Default": "amazon desktop key",
+            "Description": "ssh key name",
             "Type": "String"
         },
         "Stage": {
@@ -27,10 +27,11 @@
         "LogstashInstanceType": {
             "Description": "Logstash EC2 instance type",
             "Type": "String",
-            "Default": "t1.micro",
+            "Default": "m4.large",
             "AllowedValues": [
                 "t1.micro",
                 "m1.small",
+                "m4.large",
                 "m3.medium",
                 "m3.large",
                 "m3.xlarge",
@@ -48,12 +49,12 @@
         "ElasticsearchInstanceType": {
             "Description": "Elasticsearch EC2 instance type",
             "Type": "String",
-            "Default": "m3.large",
+            "Default": "m4.large",
             "AllowedValues": [
                 "t1.micro",
                 "m1.small",
                 "m3.medium",
-                "m3.large",
+                "m4.large",
                 "m3.xlarge",
                 "m3.2xlarge"
             ],
@@ -125,7 +126,7 @@
         "LogstashLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
-                "ImageId": "ami-cb4986bc",
+                "ImageId": "ami-d05e75b8",
                 "SecurityGroups": [ { "Ref": "LogstashSecurityGroup" } ],
                 "InstanceType": { "Ref": "LogstashInstanceType" },
                 "KeyName": { "Ref": "KeyName" },
@@ -140,7 +141,7 @@
                             "apt-get -y update",
                             "apt-get -y install language-pack-en openjdk-7-jre-headless logstash",
 
-                            "wget -O /etc/logstash/conf.d/logstash-indexer.conf https://raw.githubusercontent.com/satterly/elk-stack/master/config/logstash-indexer.conf",
+                            "wget -O /etc/logstash/conf.d/logstash-indexer.conf https://raw.githubusercontent.com/davidstacy/elk-stack/master/config/logstash-indexer.conf",
 
                             { "Fn::Join": [ "", [ "sed -i",
                                 " -e 's,@@ELASTICSEARCH,", { "Fn::GetAtt": [ "ElasticsearchLoadBalancer", "DNSName" ]}, ",g'",
@@ -162,14 +163,13 @@
                         "IpProtocol": "tcp",
                         "FromPort": "6379",
                         "ToPort": "6379",
-                        "SourceSecurityGroupName": "amazon-elb-sg",
-                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": "77.91.248.0/21"
+                        "CidrIp": "0.0.0.0/0"
                     }
                 ]
             }
@@ -281,7 +281,7 @@
         "ElasticsearchLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
-                "ImageId": "ami-cb4986bc",
+                "ImageId": "ami-d05e75b8",
                 "SecurityGroups": [ { "Ref": "ElasticsearchSecurityGroup" } ],
                 "InstanceType": { "Ref": "ElasticsearchInstanceType" },
                 "KeyName": { "Ref": "KeyName" },
@@ -304,12 +304,12 @@
                             "/usr/share/elasticsearch/bin/plugin --install karmi/elasticsearch-paramedic",
                             "/usr/share/elasticsearch/bin/plugin --install royrusso/elasticsearch-HQ",
 
-                            "wget -O /etc/elasticsearch/elasticsearch.yml https://raw.githubusercontent.com/satterly/elk-stack/master/config/elasticsearch.yml",
+                            "wget -O /etc/elasticsearch/elasticsearch.yml https://raw.githubusercontent.com/davidstacy/elk-stack/master/config/elasticsearch.yml",
                             { "Fn::Join": [ "", [ "sed -i",
                                 " -e 's,@@REGION,", { "Ref": "AWS::Region" }, ",g'",
                                 " /etc/elasticsearch/elasticsearch.yml" ] ] },
 
-                            "wget -O /etc/init/elasticsearch.conf https://raw.githubusercontent.com/satterly/elk-stack/master/config/upstart-elasticsearch.conf",
+                            "wget -O /etc/init/elasticsearch.conf https://raw.githubusercontent.com/davidstacy/elk-stack/master/config/upstart-elasticsearch.conf",
 
                             "umount /mnt",
                             "mkdir -m 000 /data",
@@ -342,21 +342,19 @@
                         "IpProtocol": "tcp",
                         "FromPort": "80",
                         "ToPort": "80",
-                        "SourceSecurityGroupName": "amazon-elb-sg",
-                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
                         "IpProtocol": "tcp",
                         "FromPort": "9200",
                         "ToPort": "9200",
-                        "SourceSecurityGroupName": "amazon-elb-sg",
-                        "SourceSecurityGroupOwnerId": "amazon-elb"
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": "77.91.248.0/21"
+                        "CidrIp": "0.0.0.0/0"
                     }
                 ]
             }
